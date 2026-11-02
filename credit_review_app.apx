@@ -1,0 +1,855 @@
+// ==============================================================================
+// APEXLang Specification: CreditPulse - Customer Credit Review Hub
+// File: credit_review/credit_review_app.apx
+// Specification conforming to Oracle APEXLang grammar (oracle/skills/apex/apexlang)
+// ==============================================================================
+
+app CREDITPULSE (
+    name: CreditPulse - Customer Credit Review Hub
+    alias: CREDITPULSE
+    version: 1.0.0
+
+    logo {
+        type: text
+        text: CreditPulse
+    }
+
+    navigation {
+        homeUrl: {
+            page: 1
+        }
+        loginUrl: {
+            page: LOGIN
+        }
+    }
+
+    navigationMenu {
+        listTemplate: @/side-navigation-menu
+        templateOptions: [
+            #DEFAULT#
+            t-TreeNav--styleA
+        ]
+        list: @navigation-menu
+    }
+
+    userInterface {
+        currentTheme: @universal-theme
+        themeStyle: Redwood Light
+        globalPage: 0
+    }
+
+    authentication {
+        scheme: @oracle-apex-accounts
+    }
+
+    runtime {
+        compatibilityMode: 24.2
+    }
+)
+
+// ==============================================================================
+// Page 1: Executive Credit & Risk Overview Dashboard
+// ==============================================================================
+page 1 (
+    name: Credit Dashboard
+    alias: DASHBOARD
+    title: Credit Risk & Exposure Command Center
+
+    appearance {
+        pageTemplate: @/standard
+        templateOptions: #DEFAULT#
+    }
+
+    // Top Metric KPI Badge Cards
+    region kpi-cards (
+        name: Credit Risk Indicators
+        type: cards
+
+        source {
+            location: localDatabase
+            type: sqlQuery
+            sqlQuery:
+                ```sql
+                select 'Total Credit Exposure' as METRIC_TITLE,
+                       to_char(sum(CURRENT_CREDIT_LIMIT), 'FML999G999G999D00') as METRIC_VALUE,
+                       count(*) || ' Active Accounts' as METRIC_SUBTITLE,
+                       'fa-building' as ICON_CLASS
+                  from CR_CUSTOMERS
+                union all
+                select 'High / Severe Risk Exposure' as METRIC_TITLE,
+                       to_char(sum(CURRENT_CREDIT_LIMIT), 'FML999G999G999D00') as METRIC_VALUE,
+                       count(*) || ' Watchlist Customers' as METRIC_SUBTITLE,
+                       'fa-exclamation-triangle' as ICON_CLASS
+                  from CR_CUSTOMERS
+                 where RISK_CATEGORY in ('High_Risk', 'Severe_Risk')
+                union all
+                select 'Total Overdue Receivables' as METRIC_TITLE,
+                       to_char(sum(OVERDUE_AMOUNT), 'FML999G999G999D00') as METRIC_VALUE,
+                       round(avg(DAYS_SALES_OUTSTANDING)) || ' Days Average DSO' as METRIC_SUBTITLE,
+                       'fa-clock-o' as ICON_CLASS
+                  from CR_CUSTOMERS
+                union all
+                select 'Pending Underwriting Reviews' as METRIC_TITLE,
+                       to_char(count(*)) as METRIC_VALUE,
+                       'Awaiting Committee Action' as METRIC_SUBTITLE,
+                       'fa-user-check' as ICON_CLASS
+                  from CR_CREDIT_REVIEWS
+                 where APPROVAL_STATUS in ('Pending', 'Escalated')
+                ```
+        }
+
+        layout {
+            sequence: 10
+            slot: body
+        }
+
+        appearance {
+            template: @/cards
+            templateOptions: [
+                #DEFAULT#
+                t-Cards--featured
+                t-Cards--displayIcons
+                t-Cards--4cols
+            ]
+        }
+
+        cardTitle: METRIC_TITLE
+        cardSubtitle: METRIC_SUBTITLE
+        cardBody: METRIC_VALUE
+        cardIcon: ICON_CLASS
+    )
+
+    // Chart: Risk Category Distribution (Donut)
+    region chart-risk-distribution (
+        name: Portfolio Distribution by Risk Tier
+        type: chart
+
+        source {
+            location: localDatabase
+            type: sqlQuery
+            sqlQuery:
+                ```sql
+                select replace(RISK_CATEGORY, '_', ' ') as RISK_TIER,
+                       count(*) as CUSTOMER_COUNT,
+                       sum(CURRENT_CREDIT_LIMIT) as EXPOSURE_AMOUNT
+                  from CR_CUSTOMERS
+                 group by RISK_CATEGORY
+                ```
+        }
+
+        layout {
+            sequence: 20
+            slot: body
+            column: 1
+            columnSpan: 6
+        }
+
+        chartType: donut
+        valueColumn: CUSTOMER_COUNT
+        labelColumn: RISK_TIER
+    )
+
+    // Chart: Exposure by Industry Sector (Bar)
+    region chart-industry-exposure (
+        name: Credit Exposure by Industry Sector
+        type: chart
+
+        source {
+            location: localDatabase
+            type: sqlQuery
+            sqlQuery:
+                ```sql
+                select replace(INDUSTRY, '_', ' ') as INDUSTRY_SECTOR,
+                       sum(CURRENT_CREDIT_LIMIT) as TOTAL_LIMIT,
+                       sum(OUTSTANDING_BALANCE) as TOTAL_OUTSTANDING
+                  from CR_CUSTOMERS
+                 group by INDUSTRY
+                 order by TOTAL_LIMIT desc
+                ```
+        }
+
+        layout {
+            sequence: 30
+            slot: body
+            column: 7
+            columnSpan: 6
+        }
+
+        chartType: bar
+        valueColumn: TOTAL_LIMIT
+        labelColumn: INDUSTRY_SECTOR
+    )
+)
+
+// ==============================================================================
+// Page 2: Customer Credit Directory & Scoring (Interactive Report)
+// ==============================================================================
+page 2 (
+    name: Customers Directory
+    alias: CUSTOMERS
+    title: Customer Credit Directory & Scoring
+
+    appearance {
+        pageTemplate: @/standard
+        templateOptions: #DEFAULT#
+    }
+
+    region customers-report (
+        name: Customer Accounts
+        type: interactiveReport
+
+        source {
+            location: localDatabase
+            type: sqlQuery
+            sqlQuery:
+                ```sql
+                select ID,
+                       COMPANY_NAME,
+                       DUNS_NUMBER,
+                       INDUSTRY,
+                       COUNTRY,
+                       CREDIT_SCORE,
+                       RISK_CATEGORY,
+                       CURRENT_CREDIT_LIMIT,
+                       REQUESTED_CREDIT_LIMIT,
+                       OUTSTANDING_BALANCE,
+                       OVERDUE_AMOUNT,
+                       DAYS_SALES_OUTSTANDING,
+                       BANKRUPTCY_FLAG,
+                       REVIEW_STATUS
+                  from CR_CUSTOMERS
+                ```
+        }
+
+        layout {
+            sequence: 10
+            slot: body
+        }
+
+        appearance {
+            template: @/interactive-report
+            templateOptions: #DEFAULT#
+        }
+
+        // Link to open Customer Credit Review Profile (Page 3)
+        link {
+            linkColumn: COMPANY_NAME
+            target: {
+                page: 3
+                values: {
+                    P3_ID: #ID#
+                }
+            }
+            linkIcon: fa-edit
+        }
+
+        pagination {
+            type: rowRangesWithLinks
+        }
+
+        column ID (
+            type: hidden
+            isPrimaryKey: true
+        )
+
+        column COMPANY_NAME (
+            heading: Customer Company
+            type: link
+            alignment: start
+        )
+
+        column DUNS_NUMBER (
+            heading: D-U-N-S #
+            type: plainText
+        )
+
+        column INDUSTRY (
+            heading: Industry
+            type: plainText
+            filter: true
+        )
+
+        column CREDIT_SCORE (
+            heading: Credit Score
+            type: number
+            alignment: center
+            highlight: true
+        )
+
+        column RISK_CATEGORY (
+            heading: Risk Tier
+            type: badge
+            alignment: center
+        )
+
+        column CURRENT_CREDIT_LIMIT (
+            heading: Current Limit
+            type: number
+            formatMask: FML999G999G999D00
+            alignment: end
+        )
+
+        column REQUESTED_CREDIT_LIMIT (
+            heading: Requested Limit
+            type: number
+            formatMask: FML999G999G999D00
+            alignment: end
+        )
+
+        column OUTSTANDING_BALANCE (
+            heading: Outstanding
+            type: number
+            formatMask: FML999G999G999D00
+            alignment: end
+        )
+
+        column OVERDUE_AMOUNT (
+            heading: Overdue
+            type: number
+            formatMask: FML999G999G999D00
+            alignment: end
+        )
+
+        column DAYS_SALES_OUTSTANDING (
+            heading: DSO
+            type: number
+            alignment: center
+        )
+
+        column BANKRUPTCY_FLAG (
+            heading: Bankrupt?
+            type: plainText
+            alignment: center
+        )
+
+        column REVIEW_STATUS (
+            heading: Review Status
+            type: badge
+            alignment: center
+        )
+    )
+
+    button btn-create-customer (
+        name: New Customer
+        label: Onboard Customer
+        type: redirect
+        target: {
+            page: 3
+        }
+        layout {
+            sequence: 10
+            slot: rightOfTitle
+        }
+        appearance {
+            buttonTemplate: @/text-icon
+            templateOptions: [
+                #DEFAULT#
+                t-Button--hot
+            ]
+            icon: fa-plus
+        }
+    )
+)
+
+// ==============================================================================
+// Page 3: Customer Profile & Underwriting Assessment Form (Modal Dialog)
+// ==============================================================================
+page 3 (
+    name: Customer Profile & Credit Assessment
+    alias: CUSTOMER_PROFILE
+    title: Customer Credit Underwriting Assessment
+    type: modalDialog
+
+    appearance {
+        pageTemplate: @/modal-dialog
+        templateOptions: [
+            #DEFAULT#
+            t-Dialog--medium
+        ]
+    }
+
+    region customer-form (
+        name: Credit Risk & Financial Assessment
+        type: form
+
+        source {
+            location: localDatabase
+            type: tableOrView
+            tableName: CR_CUSTOMERS
+            primaryKeyColumn: ID
+        }
+
+        layout {
+            sequence: 10
+            slot: body
+        }
+
+        item P3_ID (
+            type: hidden
+            isPrimaryKey: true
+        )
+
+        item P3_COMPANY_NAME (
+            label: Company Legal Name
+            type: text
+            required: true
+        )
+
+        item P3_DUNS_NUMBER (
+            label: D-U-N-S Number
+            type: text
+            required: true
+        )
+
+        item P3_INDUSTRY (
+            label: Industry Sector
+            type: selectList
+            lov: STATIC:Technology;Technology,Healthcare;Healthcare,Manufacturing;Manufacturing,Financial Services;Financial_Services,Retail;Retail,Energy;Energy
+            required: true
+        )
+
+        item P3_ANNUAL_REVENUE (
+            label: Annual Revenue
+            type: number
+        )
+
+        item P3_CREDIT_SCORE (
+            label: Bureau Credit Score (300-850)
+            type: number
+            required: true
+        )
+
+        item P3_RISK_CATEGORY (
+            label: Risk Tier Classification
+            type: radioGroup
+            lov: STATIC:Low Risk;Low_Risk,Moderate Risk;Moderate_Risk,High Risk;High_Risk,Severe Risk;Severe_Risk
+            required: true
+        )
+
+        item P3_CURRENT_CREDIT_LIMIT (
+            label: Current Approved Credit Limit
+            type: number
+            required: true
+        )
+
+        item P3_REQUESTED_CREDIT_LIMIT (
+            label: Requested Credit Limit
+            type: number
+            required: true
+        )
+
+        item P3_OUTSTANDING_BALANCE (
+            label: Current Outstanding Balance
+            type: number
+        )
+
+        item P3_OVERDUE_AMOUNT (
+            label: Overdue Amount (> 30 Days)
+            type: number
+        )
+
+        item P3_DAYS_SALES_OUTSTANDING (
+            label: Days Sales Outstanding (DSO)
+            type: number
+        )
+
+        item P3_BANKRUPTCY_FLAG (
+            label: Historical Bankruptcy or Legal Distress
+            type: radioGroup
+            lov: STATIC:No;N,Yes;Y
+            defaultValue: N
+        )
+
+        item P3_REVIEW_STATUS (
+            label: Underwriting Review Status
+            type: selectList
+            lov: STATIC:Draft;Draft,Pending Analyst;Pending_Analyst,Committee Review;Committee_Review,Approved;Approved,Rejected;Rejected,Conditional;Conditional
+            required: true
+        )
+
+        item P3_AI_RISK_SUMMARY (
+            label: AI Underwriting Synthesis & Risk Rationale
+            type: textarea
+        )
+    )
+
+    button btn-cancel (
+        name: Cancel
+        label: Cancel
+        type: cancelDialog
+        layout {
+            sequence: 10
+            slot: close
+        }
+        appearance {
+            buttonTemplate: @/text
+            templateOptions: #DEFAULT#
+        }
+    )
+
+    button btn-save (
+        name: Save
+        label: Save Underwriting Assessment
+        type: submit
+        layout {
+            sequence: 20
+            slot: create
+        }
+        appearance {
+            buttonTemplate: @/text-icon
+            templateOptions: [
+                #DEFAULT#
+                t-Button--hot
+            ]
+            icon: fa-check
+        }
+    )
+)
+
+// ==============================================================================
+// Page 4: Credit Committee Reviews & Decisions Log (Interactive Report)
+// ==============================================================================
+page 4 (
+    name: Credit Reviews Log
+    alias: REVIEWS
+    title: Credit Committee Decision Log
+
+    appearance {
+        pageTemplate: @/standard
+        templateOptions: #DEFAULT#
+    }
+
+    region reviews-report (
+        name: Formal Underwriting Reviews
+        type: interactiveReport
+
+        source {
+            location: localDatabase
+            type: sqlQuery
+            sqlQuery:
+                ```sql
+                select r.ID,
+                       c.COMPANY_NAME,
+                       r.REVIEW_DATE,
+                       r.ANALYST_NAME,
+                       r.PROPOSED_CREDIT_LIMIT,
+                       r.RECOMMENDED_ACTION,
+                       r.PAYMENT_TERMS,
+                       r.FINANCIAL_STATEMENT_RATING,
+                       r.COLLATERAL_VALUE,
+                       r.APPROVAL_STATUS
+                  from CR_CREDIT_REVIEWS r
+                  join CR_CUSTOMERS c on c.ID = r.CUSTOMER_ID
+                 order by r.REVIEW_DATE desc
+                ```
+        }
+
+        layout {
+            sequence: 10
+            slot: body
+        }
+
+        appearance {
+            template: @/interactive-report
+            templateOptions: #DEFAULT#
+        }
+
+        link {
+            linkColumn: COMPANY_NAME
+            target: {
+                page: 5
+                values: {
+                    P5_ID: #ID#
+                }
+            }
+            linkIcon: fa-edit
+        }
+
+        column ID (
+            type: hidden
+            isPrimaryKey: true
+        )
+
+        column COMPANY_NAME (
+            heading: Customer
+            type: link
+        )
+
+        column REVIEW_DATE (
+            heading: Date
+            type: date
+            formatMask: DS
+            alignment: center
+        )
+
+        column ANALYST_NAME (
+            heading: Underwriter / Analyst
+            type: plainText
+        )
+
+        column PROPOSED_CREDIT_LIMIT (
+            heading: Proposed Limit
+            type: number
+            formatMask: FML999G999G999D00
+            alignment: end
+        )
+
+        column RECOMMENDED_ACTION (
+            heading: Recommendation
+            type: badge
+            alignment: center
+        )
+
+        column PAYMENT_TERMS (
+            heading: Terms
+            type: plainText
+            alignment: center
+        )
+
+        column FINANCIAL_STATEMENT_RATING (
+            heading: Financials
+            type: badge
+            alignment: center
+        )
+
+        column COLLATERAL_VALUE (
+            heading: Collateral Pledged
+            type: number
+            formatMask: FML999G999G999D00
+            alignment: end
+        )
+
+        column APPROVAL_STATUS (
+            heading: Status
+            type: badge
+            alignment: center
+            highlight: true
+        )
+    )
+
+    button btn-new-review (
+        name: New Review
+        label: Log Committee Review
+        type: redirect
+        target: {
+            page: 5
+        }
+        layout {
+            sequence: 10
+            slot: rightOfTitle
+        }
+        appearance {
+            buttonTemplate: @/text-icon
+            templateOptions: [
+                #DEFAULT#
+                t-Button--hot
+            ]
+            icon: fa-plus
+        }
+    )
+)
+
+// ==============================================================================
+// Page 5: Credit Review Form Modal
+// ==============================================================================
+page 5 (
+    name: Underwriting Decision
+    alias: REVIEW_FORM
+    title: Credit Committee Decision Record
+    type: modalDialog
+
+    appearance {
+        pageTemplate: @/modal-dialog
+        templateOptions: [
+            #DEFAULT#
+            t-Dialog--medium
+        ]
+    }
+
+    region review-form (
+        name: Underwriting Decision Record
+        type: form
+
+        source {
+            location: localDatabase
+            type: tableOrView
+            tableName: CR_CREDIT_REVIEWS
+            primaryKeyColumn: ID
+        }
+
+        layout {
+            sequence: 10
+            slot: body
+        }
+
+        item P5_ID (
+            type: hidden
+            isPrimaryKey: true
+        )
+
+        item P5_CUSTOMER_ID (
+            label: Customer Account
+            type: selectList
+            lov: SQL:select COMPANY_NAME as d, ID as r from CR_CUSTOMERS order by COMPANY_NAME
+            required: true
+        )
+
+        item P5_REVIEW_DATE (
+            label: Decision Date
+            type: datePicker
+            required: true
+        )
+
+        item P5_ANALYST_NAME (
+            label: Underwriter / Analyst
+            type: text
+            required: true
+        )
+
+        item P5_PROPOSED_CREDIT_LIMIT (
+            label: Proposed Limit
+            type: number
+            required: true
+        )
+
+        item P5_RECOMMENDED_ACTION (
+            label: Recommendation
+            type: selectList
+            lov: STATIC:Approve Limit;Approve_Limit,Maintain Limit;Maintain_Limit,Reduce Limit;Reduce_Limit,Require Collateral;Require_Collateral,Reject;Reject
+            required: true
+        )
+
+        item P5_PAYMENT_TERMS (
+            label: Approved Payment Terms
+            type: selectList
+            lov: STATIC:Net 30;Net_30,Net 45;Net_45,Net 60;Net_60,Letter of Credit;Letter_of_Credit,Prepayment;Prepayment
+            required: true
+        )
+
+        item P5_FINANCIAL_STATEMENT_RATING (
+            label: Balance Sheet Strength
+            type: radioGroup
+            lov: STATIC:Strong;Strong,Satisfactory;Satisfactory,Weak;Weak,Distressed;Distressed
+        )
+
+        item P5_COLLATERAL_VALUE (
+            label: Security / Collateral Pledged
+            type: number
+        )
+
+        item P5_REVIEW_NOTES (
+            label: Committee Rationale & Conditions
+            type: textarea
+        )
+
+        item P5_APPROVAL_STATUS (
+            label: Approval State
+            type: selectList
+            lov: STATIC:Pending;Pending,Approved;Approved,Rejected;Rejected,Escalated;Escalated
+            required: true
+        )
+    )
+
+    button btn-cancel (
+        name: Cancel
+        label: Cancel
+        type: cancelDialog
+        layout {
+            sequence: 10
+            slot: close
+        }
+        appearance {
+            buttonTemplate: @/text
+            templateOptions: #DEFAULT#
+        }
+    )
+
+    button btn-save (
+        name: Save
+        label: Record Decision
+        type: submit
+        layout {
+            sequence: 20
+            slot: create
+        }
+        appearance {
+            buttonTemplate: @/text-icon
+            templateOptions: [
+                #DEFAULT#
+                t-Button--hot
+            ]
+            icon: fa-check
+        }
+    )
+)
+
+// ==============================================================================
+// Page 6: Financial Anomalies & Risk Alert Feed (Cards / Stream)
+// ==============================================================================
+page 6 (
+    name: Early Warning Feed
+    alias: ANOMALIES
+    title: Financial Anomalies & Early Warning Signals
+
+    appearance {
+        pageTemplate: @/standard
+        templateOptions: #DEFAULT#
+    }
+
+    region anomalies-feed (
+        name: Real-Time Early Warning Anomaly Stream
+        type: cards
+
+        source {
+            location: localDatabase
+            type: sqlQuery
+            sqlQuery:
+                ```sql
+                select a.ID,
+                       c.COMPANY_NAME,
+                       replace(a.ANOMALY_TYPE, '_', ' ') as ANOMALY_TYPE,
+                       a.SEVERITY,
+                       'Impact Score: ' || a.IMPACT_SCORE || '/100' as IMPACT_TEXT,
+                       a.ALERT_DESCRIPTION,
+                       a.STATUS,
+                       to_char(a.DETECTED_DATE, 'YYYY-MM-DD') as DETECTED_DATE_STR
+                  from CR_FINANCIAL_ANOMALIES a
+                  join CR_CUSTOMERS c on c.ID = a.CUSTOMER_ID
+                 order by case a.SEVERITY when 'Critical' then 1 when 'High' then 2 when 'Medium' then 3 else 4 end,
+                          a.DETECTED_DATE desc
+                ```
+        }
+
+        layout {
+            sequence: 10
+            slot: body
+        }
+
+        appearance {
+            template: @/cards
+            templateOptions: [
+                #DEFAULT#
+                t-Cards--featured
+                t-Cards--displayIcons
+            ]
+        }
+
+        cardTitle: COMPANY_NAME
+        cardSubtitle: ANOMALY_TYPE
+        cardBody: ALERT_DESCRIPTION
+        cardSecondaryBody: IMPACT_TEXT
+
+        actions {
+            primary {
+                type: link
+                label: Investigate Customer
+                target: {
+                    page: 3
+                    values: {
+                        P3_ID: #ID#
+                    }
+                }
+            }
+        }
+    )
+)

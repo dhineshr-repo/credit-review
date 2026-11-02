@@ -1,0 +1,507 @@
+# Application Definition
+- Application Name: CreditPulse - Customer Credit Review Hub
+- Application Alias: CREDITPULSE
+- Primary Application Language: en
+- Application Features:
+  - Feature: Access Control
+  - Feature: Activity Reporting
+  - Feature: Theme Style Selection
+
+- Access Controls
+  - Roles:
+    - Role: Administrator
+      - Description: Full administration and user privilege assignment.
+    - Role: Credit Officer
+      - Description: Perform underwriting evaluations and review limits.
+    - Role: Committee Member
+      - Description: Formally approve or reject high-limit credit applications.
+    - Role: Treasury Analyst
+      - Description: Monitor DSO, aging receivables, and payment anomalies.
+    - Role: Viewer
+      - Description: Read-only access to customer credit dossiers.
+
+- Navigation Menu
+  - Entries:
+    - Menu Entry
+      - Label: Credit Dashboard
+      - Target Page: 1
+      - Icon: fa-dashboard
+      - Authorized Roles: Administrator, Credit Officer, Committee Member, Treasury Analyst, Viewer
+    - Menu Entry
+      - Label: Customers Directory
+      - Target Page: 2
+      - Icon: fa-users
+      - Authorized Roles: Administrator, Credit Officer, Committee Member, Treasury Analyst, Viewer
+    - Menu Entry
+      - Label: Underwriting Reviews
+      - Target Page: 4
+      - Icon: fa-check-square-o
+      - Authorized Roles: Administrator, Credit Officer, Committee Member, Treasury Analyst
+    - Menu Entry
+      - Label: Early Warning Feed
+      - Target Page: 6
+      - Icon: fa-bell-o
+      - Authorized Roles: Administrator, Credit Officer, Committee Member, Treasury Analyst
+
+- Page Groups
+  - Page Group
+    - Name: Home
+    - Description: Executive credit exposure and risk dashboard.
+  - Page Group
+    - Name: Customers
+    - Description: Customer dossiers, credit ratings, and limits.
+  - Page Group
+    - Name: Reviews
+    - Description: Underwriting assessments and committee decisions.
+  - Page Group
+    - Name: Anomalies
+    - Description: Early warning signals and financial distress alerts.
+
+- List of Values (LOV)
+  - List of Values
+    - Name: LOV_INDUSTRY
+    - Type: Static
+    - Entries:
+      - Technology: Technology
+      - Healthcare: Healthcare
+      - Manufacturing: Manufacturing
+      - Financial Services: Financial_Services
+      - Retail: Retail
+      - Energy: Energy
+  - List of Values
+    - Name: LOV_RISK_CATEGORY
+    - Type: Static
+    - Entries:
+      - Low Risk: Low_Risk
+      - Moderate Risk: Moderate_Risk
+      - High Risk: High_Risk
+      - Severe Risk: Severe_Risk
+  - List of Values
+    - Name: LOV_REVIEW_STATUS
+    - Type: Static
+    - Entries:
+      - Draft: Draft
+      - Pending Analyst: Pending_Analyst
+      - Committee Review: Committee_Review
+      - Approved: Approved
+      - Rejected: Rejected
+      - Conditional: Conditional
+  - List of Values
+    - Name: LOV_RECOMMENDED_ACTION
+    - Type: Static
+    - Entries:
+      - Approve Limit: Approve_Limit
+      - Maintain Limit: Maintain_Limit
+      - Reduce Limit: Reduce_Limit
+      - Require Collateral: Require_Collateral
+      - Reject: Reject
+  - List of Values
+    - Name: LOV_PAYMENT_TERMS
+    - Type: Static
+    - Entries:
+      - Net 30: Net_30
+      - Net 45: Net_45
+      - Net 60: Net_60
+      - Letter of Credit: Letter_of_Credit
+      - Prepayment: Prepayment
+  - List of Values
+    - Name: LOV_SEVERITY
+    - Type: Static
+    - Entries:
+      - Critical: Critical
+      - High: High
+      - Medium: Medium
+      - Low: Low
+
+## Pages
+
+### Page
+- Number: 1
+- Name: Credit Dashboard
+- Title: Credit Risk & Exposure Command Center
+- Page Mode: standard
+- Page Group: Home
+- Authorized Roles: Administrator, Credit Officer, Committee Member, Treasury Analyst, Viewer
+
+- Regions:
+  - Region
+    - Name: Total Credit Exposure KPI
+    - Type: Metric Card
+    - Source:
+      - Table: CR_CUSTOMERS
+    - Columns:
+      - Column Name: METRIC_TITLE
+        - Label: Metric
+        - Datatype: VARCHAR2
+        - Visible: true
+      - Column Name: CURRENT_CREDIT_LIMIT
+        - Label: Exposure
+        - Datatype: NUMBER
+        - Visible: true
+  - Region
+    - Name: Watchlist Exposure KPI
+    - Type: Metric Card
+    - Source:
+      - Table: CR_CUSTOMERS
+    - Columns:
+      - Column Name: METRIC_TITLE
+        - Label: Metric
+        - Datatype: VARCHAR2
+        - Visible: true
+      - Column Name: CURRENT_CREDIT_LIMIT
+        - Label: High Risk Exposure
+        - Datatype: NUMBER
+        - Visible: true
+  - Region
+    - Name: Overdue Receivables KPI
+    - Type: Metric Card
+    - Source:
+      - Table: CR_CUSTOMERS
+    - Columns:
+      - Column Name: METRIC_TITLE
+        - Label: Metric
+        - Datatype: VARCHAR2
+        - Visible: true
+      - Column Name: OVERDUE_AMOUNT
+        - Label: Past Due
+        - Datatype: NUMBER
+        - Visible: true
+  - Region
+    - Name: Pending Reviews KPI
+    - Type: Metric Card
+    - Source:
+      - Table: CR_CREDIT_REVIEWS
+    - Columns:
+      - Column Name: METRIC_TITLE
+        - Label: Metric
+        - Datatype: VARCHAR2
+        - Visible: true
+      - Column Name: APPROVAL_STATUS
+        - Label: Status
+        - Datatype: VARCHAR2
+        - Visible: true
+  - Region
+    - Name: Portfolio Risk Distribution
+    - Type: Component
+    - Component:
+      - Component Type: Chart
+      - Qualifier: Donut
+    - Source:
+      - Table: CR_CUSTOMERS
+  - Region
+    - Name: Exposure by Industry Sector
+    - Type: Component
+    - Component:
+      - Component Type: Chart
+      - Qualifier: Bar
+    - Source:
+      - Table: CR_CUSTOMERS
+
+### Page
+- Number: 2
+- Name: Customers Directory
+- Title: Customer Credit Directory & Scoring
+- Page Mode: standard
+- Page Group: Customers
+- Authorized Roles: Administrator, Credit Officer, Committee Member, Treasury Analyst, Viewer
+
+- Actions:
+  - Action: Onboard Customer
+    - Label: Onboard Customer
+    - Slot: rightOfTitle
+    - Action Type: Redirect
+    - Target:
+      - Page: 3
+
+- Regions:
+  - Region
+    - Name: Customer Directory Report
+    - Type: Interactive Report
+    - Source:
+      - Table: CR_CUSTOMERS
+    - Columns:
+      - Column Name: COMPANY_NAME
+        - Label: Company Legal Name
+        - Datatype: VARCHAR2
+        - Render As: Link
+        - Target Page: 3
+        - Visible: true
+      - Column Name: DUNS_NUMBER
+        - Label: D-U-N-S #
+        - Datatype: VARCHAR2
+        - Visible: true
+      - Column Name: INDUSTRY
+        - Label: Industry
+        - Datatype: VARCHAR2
+        - List of Values: LOV_INDUSTRY
+        - Visible: true
+      - Column Name: CREDIT_SCORE
+        - Label: Credit Score
+        - Datatype: NUMBER
+        - Visible: true
+      - Column Name: RISK_CATEGORY
+        - Label: Risk Tier
+        - Datatype: VARCHAR2
+        - List of Values: LOV_RISK_CATEGORY
+        - Visible: true
+      - Column Name: CURRENT_CREDIT_LIMIT
+        - Label: Current Limit
+        - Datatype: NUMBER
+        - Visible: true
+      - Column Name: REQUESTED_CREDIT_LIMIT
+        - Label: Requested Limit
+        - Datatype: NUMBER
+        - Visible: true
+      - Column Name: OUTSTANDING_BALANCE
+        - Label: Outstanding Balance
+        - Datatype: NUMBER
+        - Visible: true
+      - Column Name: OVERDUE_AMOUNT
+        - Label: Overdue Amount
+        - Datatype: NUMBER
+        - Visible: true
+      - Column Name: DAYS_SALES_OUTSTANDING
+        - Label: DSO
+        - Datatype: NUMBER
+        - Visible: true
+      - Column Name: REVIEW_STATUS
+        - Label: Review Status
+        - Datatype: VARCHAR2
+        - List of Values: LOV_REVIEW_STATUS
+        - Visible: true
+
+### Page
+- Number: 3
+- Name: Customer Profile & Assessment
+- Title: Customer Credit Underwriting Assessment
+- Page Mode: modalDialog
+- Page Group: Customers
+- Authorized Roles: Administrator, Credit Officer, Committee Member
+
+- Actions:
+  - Action: Cancel
+    - Label: Cancel
+    - Slot: close
+    - Action Type: Cancel Dialog
+  - Action: Save
+    - Label: Save Assessment
+    - Slot: create
+    - Action Type: Submit
+
+- Regions:
+  - Region
+    - Name: Customer Underwriting Form
+    - Type: Form
+    - Source:
+      - Table: CR_CUSTOMERS
+    - Columns:
+      - Column Name: COMPANY_NAME
+        - Label: Company Legal Name
+        - Datatype: VARCHAR2
+        - Visible: true
+      - Column Name: DUNS_NUMBER
+        - Label: D-U-N-S #
+        - Datatype: VARCHAR2
+        - Visible: true
+      - Column Name: INDUSTRY
+        - Label: Industry Sector
+        - Datatype: VARCHAR2
+        - List of Values: LOV_INDUSTRY
+        - Visible: true
+      - Column Name: ANNUAL_REVENUE
+        - Label: Annual Revenue
+        - Datatype: NUMBER
+        - Visible: true
+      - Column Name: CREDIT_SCORE
+        - Label: Bureau Score (300-850)
+        - Datatype: NUMBER
+        - Visible: true
+      - Column Name: RISK_CATEGORY
+        - Label: Risk Category
+        - Datatype: VARCHAR2
+        - List of Values: LOV_RISK_CATEGORY
+        - Visible: true
+      - Column Name: CURRENT_CREDIT_LIMIT
+        - Label: Approved Credit Limit
+        - Datatype: NUMBER
+        - Visible: true
+      - Column Name: REQUESTED_CREDIT_LIMIT
+        - Label: Requested Credit Limit
+        - Datatype: NUMBER
+        - Visible: true
+      - Column Name: OUTSTANDING_BALANCE
+        - Label: Outstanding Receivables
+        - Datatype: NUMBER
+        - Visible: true
+      - Column Name: OVERDUE_AMOUNT
+        - Label: Overdue Receivables
+        - Datatype: NUMBER
+        - Visible: true
+      - Column Name: DAYS_SALES_OUTSTANDING
+        - Label: Days Sales Outstanding (DSO)
+        - Datatype: NUMBER
+        - Visible: true
+      - Column Name: REVIEW_STATUS
+        - Label: Underwriting Status
+        - Datatype: VARCHAR2
+        - List of Values: LOV_REVIEW_STATUS
+        - Visible: true
+      - Column Name: AI_RISK_SUMMARY
+        - Label: AI Risk Rationale
+        - Datatype: CLOB
+        - Visible: true
+
+### Page
+- Number: 4
+- Name: Underwriting Reviews
+- Title: Credit Committee Decision Log
+- Page Mode: standard
+- Page Group: Reviews
+- Authorized Roles: Administrator, Credit Officer, Committee Member, Treasury Analyst
+
+- Actions:
+  - Action: Log Decision
+    - Label: Log Committee Review
+    - Slot: rightOfTitle
+    - Action Type: Redirect
+    - Target:
+      - Page: 5
+
+- Regions:
+  - Region
+    - Name: Credit Reviews Report
+    - Type: Interactive Report
+    - Source:
+      - Table: CR_CREDIT_REVIEWS
+    - Columns:
+      - Column Name: REVIEW_DATE
+        - Label: Date
+        - Datatype: DATE
+        - Visible: true
+      - Column Name: ANALYST_NAME
+        - Label: Underwriter
+        - Datatype: VARCHAR2
+        - Visible: true
+      - Column Name: PROPOSED_CREDIT_LIMIT
+        - Label: Proposed Limit
+        - Datatype: NUMBER
+        - Visible: true
+      - Column Name: RECOMMENDED_ACTION
+        - Label: Recommendation
+        - Datatype: VARCHAR2
+        - List of Values: LOV_RECOMMENDED_ACTION
+        - Visible: true
+      - Column Name: PAYMENT_TERMS
+        - Label: Approved Terms
+        - Datatype: VARCHAR2
+        - List of Values: LOV_PAYMENT_TERMS
+        - Visible: true
+      - Column Name: COLLATERAL_VALUE
+        - Label: Collateral Value
+        - Datatype: NUMBER
+        - Visible: true
+      - Column Name: APPROVAL_STATUS
+        - Label: Approval Status
+        - Datatype: VARCHAR2
+        - Visible: true
+
+### Page
+- Number: 5
+- Name: Record Decision Form
+- Title: Underwriting Decision Entry
+- Page Mode: modalDialog
+- Page Group: Reviews
+- Authorized Roles: Administrator, Credit Officer, Committee Member
+
+- Actions:
+  - Action: Cancel
+    - Label: Cancel
+    - Slot: close
+    - Action Type: Cancel Dialog
+  - Action: Save
+    - Label: Record Decision
+    - Slot: create
+    - Action Type: Submit
+
+- Regions:
+  - Region
+    - Name: Decision Form
+    - Type: Form
+    - Source:
+      - Table: CR_CREDIT_REVIEWS
+    - Columns:
+      - Column Name: REVIEW_DATE
+        - Label: Decision Date
+        - Datatype: DATE
+        - Visible: true
+      - Column Name: ANALYST_NAME
+        - Label: Underwriter
+        - Datatype: VARCHAR2
+        - Visible: true
+      - Column Name: PROPOSED_CREDIT_LIMIT
+        - Label: Proposed Limit
+        - Datatype: NUMBER
+        - Visible: true
+      - Column Name: RECOMMENDED_ACTION
+        - Label: Action
+        - Datatype: VARCHAR2
+        - List of Values: LOV_RECOMMENDED_ACTION
+        - Visible: true
+      - Column Name: PAYMENT_TERMS
+        - Label: Terms
+        - Datatype: VARCHAR2
+        - List of Values: LOV_PAYMENT_TERMS
+        - Visible: true
+      - Column Name: COLLATERAL_VALUE
+        - Label: Collateral Pledged
+        - Datatype: NUMBER
+        - Visible: true
+      - Column Name: REVIEW_NOTES
+        - Label: Conditions & Rationale
+        - Datatype: CLOB
+        - Visible: true
+      - Column Name: APPROVAL_STATUS
+        - Label: Approval State
+        - Datatype: VARCHAR2
+        - Visible: true
+
+### Page
+- Number: 6
+- Name: Early Warning Feed
+- Title: Financial Anomalies & Risk Signals
+- Page Mode: standard
+- Page Group: Anomalies
+- Authorized Roles: Administrator, Credit Officer, Committee Member, Treasury Analyst
+
+- Regions:
+  - Region
+    - Name: Financial Anomalies Feed
+    - Type: Interactive Report
+    - Source:
+      - Table: CR_FINANCIAL_ANOMALIES
+    - Columns:
+      - Column Name: DETECTED_DATE
+        - Label: Detected
+        - Datatype: DATE
+        - Visible: true
+      - Column Name: ANOMALY_TYPE
+        - Label: Anomaly Trigger
+        - Datatype: VARCHAR2
+        - Visible: true
+      - Column Name: SEVERITY
+        - Label: Severity
+        - Datatype: VARCHAR2
+        - List of Values: LOV_SEVERITY
+        - Visible: true
+      - Column Name: IMPACT_SCORE
+        - Label: Impact (0-100)
+        - Datatype: NUMBER
+        - Visible: true
+      - Column Name: ALERT_DESCRIPTION
+        - Label: Description
+        - Datatype: VARCHAR2
+        - Visible: true
+      - Column Name: STATUS
+        - Label: Status
+        - Datatype: VARCHAR2
+        - Visible: true
